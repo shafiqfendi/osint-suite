@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT Recon Suite v2.0</title>
+<style>
+  :root {
+    --bg: #080c14; --card: #111827; --card2: #0c1220; --border: #1e293b;
+    --accent: #00e5ff; --accent-dim: rgba(0, 229, 255, 0.12);
+    --text: #e2e8f0; --muted: #94a3b8; --ok: #10b981; --warn: #f59e0b; --bad: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: var(--bg); color: var(--text); padding: 24px 16px; line-height: 1.5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .brand { font-size: 1.45rem; font-weight: 800; color: var(--accent); letter-spacing: 0.5px; }
+  .pill { font-size: 0.72rem; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,229,255,0.35); padding: 3px 10px; border-radius: 99px; margin-left: 8px; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tab { background: var(--card); border: 1px solid var(--border); color: var(--muted); padding: 9px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.86rem; transition: 0.2s; }
+  .tab:hover { border-color: var(--accent); color: var(--text); }
+  .tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .panel { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .panel.active { display: block; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  input[type="text"], input[type="file"], select { flex: 1; min-width: 180px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 11px 14px; border-radius: 8px; font-size: 0.93rem; outline: none; }
+  select { flex: 0 0 110px; min-width: 90px; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .btn { background: var(--accent); color: #05101a; border: none; padding: 11px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+  .btn:hover { opacity: 0.9; }
+  .btn-sec { background: var(--card2); color: var(--accent); border: 1px solid rgba(0,229,255,0.35); padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.82rem; text-decoration: none; display: inline-block; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+  .box { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; }
+  .box h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent); margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .kv { font-size: 0.85rem; margin-bottom: 5px; word-break: break-word; }
+  .kv b { color: var(--muted); font-weight: 600; }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 190px; overflow-y: auto; }
+  .tag { background: #0f172a; border: 1px solid var(--border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.78rem; color: #bae6fd; }
+  .tag-cve { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.78rem; }
+
+  .grid-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+  .item-card { display: flex; flex-direction: column; gap: 3px; background: var(--card2); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text); font-size: 0.86rem; }
+  .item-card:hover { border-color: var(--accent); }
+  .item-top { display: flex; justify-content: space-between; align-items: center; }
+  .item-extra { font-size: 0.74rem; color: var(--muted); }
+  .ok { color: var(--ok); font-weight: 700; font-size: 0.76rem; }
+  .warn { color: var(--warn); font-size: 0.76rem; }
+  .no { color: var(--muted); font-size: 0.76rem; }
+  .bad { color: var(--bad); font-weight: 700; }
+
+  .dork-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card2); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .dork-q { font-family: monospace; font-size: 0.83rem; color: #fde047; word-break: break-all; }
+  .loader { color: var(--accent); font-size: 0.9rem; margin: 10px 0; }
+  .err { color: var(--bad); font-size: 0.9rem; margin: 10px 0; }
+  footer { text-align: center; margin-top: 26px; font-size: 0.78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><span class="brand">OSINT RECON SUITE</span><span class="pill">v2.0 PRO ENGINE</span></div>
+    <button class="btn-sec" onclick="exportLastJSON()">Muat Turun Laporan (.JSON)</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="openTab('domain', this)">Domain Recon</button>
+    <button class="tab" onclick="openTab('ip', this)">IP, Shodan & Port</button>
+    <button class="tab" onclick="openTab('username', this)">Username (18+)</button>
+    <button class="tab" onclick="openTab('phone', this)">Phone Intel</button>
+    <button class="tab" onclick="openTab('email', this)">Email Intel</button>
+    <button class="tab" onclick="openTab('exif', this)">EXIF & Forensik</button>
+    <button class="tab" onclick="openTab('dorks', this)">Google Dorks</button>
+  </div>
+
+  <!-- 1. DOMAIN -->
+  <div id="tab-domain" class="panel active">
+    <div class="row">
+      <input type="text" id="domainIn" placeholder="Masukkan domain (cth: example.com)">
+      <button class="btn" onclick="scanDomain()">Imbas Penuh</button>
+    </div>
+    <div id="domainOut"></div>
+  </div>
+
+  <!-- 2. IP & SHODAN -->
+  <div id="tab-ip" class="panel">
+    <div class="row">
+      <input type="text" id="ipIn" placeholder="Masukkan IP atau domain (cth: 1.1.1.1 atau scanme.nmap.org)">
+      <button class="btn" onclick="scanIP()">Analisis IP & Shodan</button>
+    </div>
+    <div id="ipOut"></div>
+  </div>
+
+  <!-- 3. USERNAME -->
+  <div id="tab-username" class="panel">
+    <div class="row">
+      <input type="text" id="userIn" placeholder="Masukkan username (cth: torvalds)">
+      <button class="btn" onclick="scanUser()">Imbas 18 Platform</button>
+    </div>
+    <div id="userOut"></div>
+  </div>
+
+  <!-- 4. PHONE -->
+  <div id="tab-phone" class="panel">
+    <div class="row">
+      <select id="phoneRegion">
+        <option value="MY">MY (+60)</option>
+        <option value="SG">SG (+65)</option>
+        <option value="ID">ID (+62)</option>
+        <option value="US">US (+1)</option>
+        <option value="GB">UK (+44)</option>
+      </select>
+      <input type="text" id="phoneIn" placeholder="Masukkan nombor telefon (cth: 0123456789 atau +60123456789)">
+      <button class="btn" onclick="scanPhone()">Analisis Nombor</button>
+    </div>
+    <div id="phoneOut"></div>
+  </div>
+
+  <!-- 5. EMAIL -->
+  <div id="tab-email" class="panel">
+    <div class="row">
+      <input type="text" id="emailIn" placeholder="Masukkan alamat emel (cth: nama@domain.com)">
+      <button class="btn" onclick="scanEmail()">Semak Emel</button>
+    </div>
+    <div id="emailOut"></div>
+  </div>
+
+  <!-- 6. EXIF -->
+  <div id="tab-exif" class="panel">
+    <div class="row">
+      <input type="file" id="exifIn" accept="image/*">
+      <button class="btn" onclick="scanExif()">Ekstrak EXIF & Hash</button>
+    </div>
+    <div id="exifOut"></div>
+  </div>
+
+  <!-- 7. DORKS -->
+  <div id="tab-dorks" class="panel">
+    <div class="row">
+      <input type="text" id="dorkIn" placeholder="Masukkan domain sasaran (cth: example.com)">
+      <button class="btn" onclick="genDorks()">Jana Dorks</button>
+    </div>
+    <div id="dorkOut"></div>
+  </div>
+
+  <footer>OSINT Recon Suite v2.0 — Untuk penyelidikan keselamatan, pendidikan, dan OSINT pasif yang sah sahaja.</footer>
+</div>
+
+<script>
+let lastReport = null;
+
+function openTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function exportLastJSON() {
+  if (!lastReport) return alert('Tiada data imbasan untuk dimuat turun lagi.');
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `osint-v2-${Date.now()}.json`;
+  a.click();
+}
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Ralat pelayan');
+  lastReport = data;
+  return data;
+}
+
+// 1. DOMAIN
+async function scanDomain() {
+  const target = document.getElementById('domainIn').value.trim();
+  const out = document.getElementById('domainOut');
+  if (!target) return;
+  out.innerHTML = '<div class="loader">Menjalankan imbasan penuh: WHOIS, DNS/SPF/DMARC, SSL, Tech Stack, robots.txt & Subdomain...</div>';
+  try {
+    const d = await postJSON('/api/domain', { target });
+    const w = d.whois, s = d.ssl, h = d.http;
+    out.innerHTML = `
+      <div class="cards">
+        <div class="box">
+          <h4>WHOIS & Identiti</h4>
+          ${w.error ? `<div class="err">${w.error}</div>` : `
+            <div class="kv"><b>IP Utama:</b> ${d.ip}</div>
+            <div class="kv"><b>Registrar:</b> ${w.registrar}</div>
+            <div class="kv"><b>Organisasi:</b> ${w.org} (${w.country})</div>
+            <div class="kv"><b>Dicipta / Tamat:</b> ${w.creation_date} → ${w.expiration_date}</div>
+            <div class="kv"><b>Emel WHOIS:</b> ${w.emails?.length ? w.emails.join(', ') : '-'}</div>
+          `}
+        </div>
+        <div class="box">
+          <h4>Web, Tech Stack & Keselamatan</h4>
+          ${h.error ? `<div class="err">${h.error}</div>` : `
+            <div class="kv"><b>Tajuk:</b> ${h.title}</div>
+            <div class="kv"><b>Status / Server:</b> ${h.status_code} | ${h.server}</div>
+            <div class="kv"><b>HSTS:</b> ${h.hsts} | <b>CSP:</b> ${h.csp} | <b>X-Frame:</b> ${h.x_frame}</div>
+            <div class="kv" style="margin-top:8px;"><b>Tech Stack:</b></div>
+            <div class="tag-list">${d.tech_stack.length ? d.tech_stack.map(t => `<span class="tag">${t}</span>`).join('') : '<span class="kv">Tiada tandatangan khusus</span>'}</div>
+          `}
+        </div>
+        <div class="box">
+          <h4>Sijil SSL/TLS</h4>
+          ${s.error ? `<div class="err">${s.error}</div>` : `
+            <div class="kv"><b>CN:</b> ${s.common_name}</div>
+            <div class="kv"><b>Pengeluar:</b> ${s.issuer}</div>
+            <div class="kv"><b>Sah:</b> ${s.valid_from} → ${s.valid_until}</div>
+            <div class="kv"><b>Jumlah SAN:</b> ${s.san_count}</div>
+          `}
+        </div>
+        <div class="box">
+          <h4>Audit Emel & DNS</h4>
+          <div class="kv"><b>SPF:</b> ${d.email_security.spf}</div>
+          <div class="kv"><b>DMARC:</b> ${d.email_security.dmarc}</div>
+          <div class="kv"><b>NS:</b> ${(d.dns.NS || []).join(', ') || '-'}</div>
+          <div class="kv"><b>MX:</b> ${(d.dns.MX || []).join(', ') || '-'}</div>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="box">
+          <h4>Subdomain Ditemui (${d.subdomains.length})</h4>
+          <div class="tag-list">${d.subdomains.length ? d.subdomains.map(sub => `<span class="tag">${sub}</span>`).join('') : '<span class="kv">Tiada subdomain ditemui.</span>'}</div>
+        </div>
+        <div class="box">
+          <h4>Laluan Disallow dalam robots.txt (${d.robots_disallow.length})</h4>
+          <div class="tag-list">${d.robots_disallow.length ? d.robots_disallow.map(p => `<span class="tag">${p}</span>`).join('') : '<span class="kv">Tiada robots.txt atau tiada laluan Disallow.</span>'}</div>
+        </div>
+      </div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 2. IP & SHODAN
+async function scanIP() {
+  const target = document.getElementById('ipIn').value.trim();
+  const out = document.getElementById('ipOut');
+  if (!target) return;
+  out.innerHTML = '<div class="loader">Menarik data Geolokasi, Shodan InternetDB (CVE/Ports) & imbasan port aktif...</div>';
+  try {
+    const d = await postJSON('/api/ip', { target });
+    const g = d.geo || {}, sh = d.shodan || {};
+    out.innerHTML = `
+      <div class="cards">
+        <div class="box">
+          <h4>Geolokasi & Status Rangkaian</h4>
+          <div class="kv"><b>IP:</b> ${d.ip}</div>
+          <div class="kv"><b>Reverse DNS:</b> ${d.reverse_dns}</div>
+          <div class="kv"><b>Lokasi:</b> ${g.city || '-'}, ${g.regionName || '-'}, ${g.country || '-'}</div>
+          <div class="kv"><b>ISP / Org:</b> ${g.isp || '-'} / ${g.org || '-'}</div>
+          <div class="kv"><b>ASN:</b> ${g.as || '-'}</div>
+          <div class="kv"><b>Proxy/VPN:</b> ${g.proxy ? '<span class="bad">Ya</span>' : 'Tidak'} | <b>Hosting/Cloud:</b> ${g.hosting ? 'Ya' : 'Tidak'}</div>
+          ${g.lat ? `<div class="kv"><a href="https://www.google.com/maps?q=${g.lat},${g.lon}" target="_blank" style="color:var(--accent);">Lihat di Google Maps ↗</a></div>` : ''}
+        </div>
+        <div class="box">
+          <h4>Shodan InternetDB (Pasif)</h4>
+          <div class="kv"><b>Port Terindeks:</b> ${(sh.ports || []).join(', ') || 'Tiada data'}</div>
+          <div class="kv"><b>Hostnames:</b> ${(sh.hostnames || []).join(', ') || '-'}</div>
+          <div class="kv"><b>Tags:</b> ${(sh.tags || []).join(', ') || '-'}</div>
+          <div class="kv" style="margin-top:6px;"><b>Kerentanan (CVEs):</b></div>
+          <div class="tag-list">${(sh.vulns && sh.vulns.length) ? sh.vulns.map(c => `<span class="tag-cve">${c}</span>`).join('') : '<span class="ok">Tiada CVE direkodkan</span>'}</div>
+        </div>
+        <div class="box">
+          <h4>Imbasan Port Aktif & Banner (${d.open_ports.length})</h4>
+          ${d.open_ports.length ? d.open_ports.map(p => `<div class="kv"><span class="ok">OPEN</span> <b>${p.port}</b> (${p.service}) ${p.banner ? `<br><span style="font-size:0.75rem;color:var(--muted);">${p.banner}</span>` : ''}</div>`).join('') : '<div class="kv">Tiada port lazim terbuka secara terus.</div>'}
+        </div>
+      </div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 3. USERNAME
+async function scanUser() {
+  const username = document.getElementById('userIn').value.trim();
+  const out = document.getElementById('userOut');
+  if (!username) return;
+  out.innerHTML = '<div class="loader">Mengimbas 18 platform secara serentak...</div>';
+  try {
+    const d = await postJSON('/api/username', { username });
+    out.innerHTML = `<div class="kv">Dijumpai di <b>${d.found_count}</b> daripada ${d.results.length} platform:</div><div class="grid-links">` +
+      d.results.map(r => `
+        <a class="item-card" href="${r.url}" target="_blank" rel="noopener">
+          <div class="item-top"><b>${r.platform}</b><span class="${r.found ? 'ok' : (r.status.includes('Manual') ? 'warn' : 'no')}">${r.status}</span></div>
+          ${r.extra ? `<div class="item-extra">${r.extra}</div>` : ''}
+        </a>`).join('') + `</div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 4. PHONE
+async function scanPhone() {
+  const phone = document.getElementById('phoneIn').value.trim();
+  const region = document.getElementById('phoneRegion').value;
+  const out = document.getElementById('phoneOut');
+  if (!phone) return;
+  out.innerHTML = '<div class="loader">Menganalisis nombor telefon...</div>';
+  try {
+    const d = await postJSON('/api/phone', { phone, region });
+    out.innerHTML = `
+      <div class="cards">
+        <div class="box">
+          <h4>Maklumat Talian & Telco</h4>
+          <div class="kv"><b>Status Sah:</b> ${d.valid ? '<span class="ok">Sah (Valid)</span>' : '<span class="bad">Tidak Sah</span>'}</div>
+          <div class="kv"><b>Format E.164:</b> ${d.e164}</div>
+          <div class="kv"><b>Antarabangsa:</b> ${d.international}</div>
+          <div class="kv"><b>Telco / Carrier:</b> ${d.carrier}</div>
+          <div class="kv"><b>Jenis Talian:</b> ${d.line_type}</div>
+          <div class="kv"><b>Lokasi / Zon Masa:</b> ${d.location} (${d.timezones.join(', ')})</div>
+        </div>
+        <div class="box">
+          <h4>Pautan Siasatan Pantas</h4>
+          <div class="grid-links">
+            <a class="item-card" href="https://wa.me/${d.digits}" target="_blank">Semak WhatsApp ↗</a>
+            <a class="item-card" href="https://t.me/+${d.digits}" target="_blank">Semak Telegram ↗</a>
+            <a class="item-card" href="https://www.truecaller.com/search/${region.toLowerCase()}/${d.digits}" target="_blank">Truecaller ↗</a>
+            <a class="item-card" href="https://www.google.com/search?q=%22${encodeURIComponent(d.e164)}%22+OR+%22${encodeURIComponent(d.national)}%22" target="_blank">Google Exact Match ↗</a>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 5. EMAIL
+async function scanEmail() {
+  const email = document.getElementById('emailIn').value.trim();
+  const out = document.getElementById('emailOut');
+  if (!email) return;
+  out.innerHTML = '<div class="loader">Menyemak rekod MX, profil Gravatar JSON & GitHub...</div>';
+  try {
+    const d = await postJSON('/api/email', { email });
+    const gp = d.gravatar_profile;
+    out.innerHTML = `
+      <div class="cards">
+        <div class="box">
+          <h4>Analisis Teknikal Emel</h4>
+          <div class="kv"><b>Emel:</b> ${d.email}</div>
+          <div class="kv"><b>Rekod MX Sah:</b> ${d.mx_valid ? '<span class="ok">Ya</span>' : '<span class="bad">Tiada</span>'}</div>
+          <div class="kv"><b>Disposable (Pakai Buang):</b> ${d.is_disposable ? '<span class="bad">Ya</span>' : 'Tidak'}</div>
+          <div class="kv"><b>Akaun GitHub Terkait:</b> ${d.github_account ? `<a href="${d.github_account.url}" target="_blank" style="color:var(--accent);">@${d.github_account.login} ↗</a>` : 'Tiada dijumpai'}</div>
+          <div class="kv"><b>MD5:</b> <code>${d.md5_hash}</code></div>
+        </div>
+        <div class="box">
+          <h4>Profil Gravatar & Pivot</h4>
+          ${d.gravatar_found ? `<img src="${d.gravatar_url}" style="width:64px;border-radius:50%;border:2px solid var(--accent);margin-bottom:8px;">` : '<div class="kv">Tiada profil Gravatar.</div>'}
+          ${gp ? `<div class="kv"><b>Nama:</b> ${gp.display_name} (@${gp.username})</div><div class="kv"><b>Lokasi:</b> ${gp.location}</div>` : ''}
+          <div class="grid-links">
+            <a class="item-card" href="https://haveibeenpwned.com/" target="_blank">Have I Been Pwned ↗</a>
+            <a class="item-card" href="https://epieos.com/" target="_blank">Epieos ↗</a>
+            <a class="item-card" href="https://www.google.com/search?q=%22${encodeURIComponent(d.email)}%22" target="_blank">Google Exact Match ↗</a>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 6. EXIF & FORENSICS
+async function scanExif() {
+  const file = document.getElementById('exifIn').files[0];
+  const out = document.getElementById('exifOut');
+  if (!file) return alert('Sila pilih fail gambar.');
+  out.innerHTML = '<div class="loader">Mengekstrak EXIF penuh, GPS & menjana hash kriptografi...</div>';
+  const fd = new FormData();
+  fd.append('image', file);
+  try {
+    const res = await fetch('/api/exif', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error);
+    lastReport = d;
+    const meta = Object.entries(d.metadata);
+    out.innerHTML = `
+      <div class="cards">
+        <div class="box">
+          <h4>Forensik Fail & GPS</h4>
+          <div class="kv"><b>Fail:</b> ${d.filename} (${d.size_kb} KB | ${d.dimensions})</div>
+          <div class="kv"><b>MD5:</b> <code>${d.hashes.md5}</code></div>
+          <div class="kv"><b>SHA256:</b> <code style="font-size:0.75rem;">${d.hashes.sha256}</code></div>
+          <div class="kv"><a href="https://www.virustotal.com/gui/file/${d.hashes.sha256}" target="_blank" style="color:var(--accent);">Semak Hash di VirusTotal ↗</a></div>
+          ${d.gps ? `<div class="kv" style="margin-top:8px;"><span class="ok">GPS DITEMUI:</span> ${d.gps.latitude}, ${d.gps.longitude} — <a href="${d.gps.maps_url}" target="_blank" style="color:var(--accent);">Buka Google Maps ↗</a></div>` : '<div class="kv">Tiada koordinat GPS dalam gambar.</div>'}
+        </div>
+        <div class="box">
+          <h4>Metadata EXIF Penuh (${meta.length} Tag)</h4>
+          <div style="max-height:260px;overflow-y:auto;">
+            ${meta.length ? meta.map(([k, v]) => `<div class="kv"><b>${k}:</b> ${v}</div>`).join('') : '<div class="kv">Tiada metadata EXIF ditemui.</div>'}
+          </div>
+        </div>
+      </div>`;
+  } catch (e) { out.innerHTML = `<div class="err">${e.message}</div>`; }
+}
+
+// 7. DORKS
+function genDorks() {
+  const t = document.getElementById('dorkIn').value.trim().replace(/^https?:\/\//i, '').split('/')[0];
+  if (!t) return;
+  const list = [
+    ['Dokumen Awam (PDF/DOCX/XLSX)', `site:${t} filetype:pdf OR filetype:docx OR filetype:xlsx`],
+    ['Panel Admin / Login', `site:${t} inurl:admin OR inurl:login OR inurl:portal OR inurl:wp-login`],
+    ['Open Directory (Index Of)', `site:${t} intitle:"index of"`],
+    ['Fail Konfigurasi / Backup / SQL', `site:${t} ext:env OR ext:bak OR ext:sql OR ext:log OR ext:xml OR ext:json`],
+    ['Subdomain Terindeks', `site:*.${t} -www`],
+    ['Sebutan di Pastebin / GitHub', `(site:pastebin.com OR site:github.com) "${t}"`],
+    ['Ralat Pangkalan Data / PHP', `site:${t} "SQL syntax" OR "Warning: mysql" OR "Fatal error"`]
+  ];
+  document.getElementById('dorkOut').innerHTML = list.map(([title, q]) => `
+    <div class="dork-row">
+      <div><div style="font-size:0.78rem;color:var(--muted);">${title}</div><div class="dork-q">${q}</div></div>
+      <a class="btn-sec" href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank">Cari ↗</a>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
